@@ -192,10 +192,24 @@ def recommend_station(
                 station.get("number_of_points", 1)
             )
         )
-
+    # Sort stations by recommendation score
     stations.sort(
         key=lambda x: x["score"],
         reverse=True
     )
 
-    return stations[0]
+    best_station = stations[0]
+
+    #remove internal fields
+    best_station.pop("score", None)
+    best_station.pop("latitude", None)
+    best_station.pop("longitude", None)
+
+    # Remove cost_per_kwh if not available
+    if best_station.get("usage_cost") == "Not Available":
+        best_station.pop("usage_cost", None)
+
+    return best_station
+
+
+    
