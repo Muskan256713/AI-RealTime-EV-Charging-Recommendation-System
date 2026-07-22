@@ -30,6 +30,9 @@ class ChargingRequest(BaseModel):
     latitude: float
     longitude: float
 
+    battery_capacity: float      # kWh
+    cost_per_kwh: float          # ₹/kWh
+
 
 # ----------------------------------------------------
 # Home Endpoint
@@ -98,7 +101,9 @@ def predict(request: ChargingRequest):
 
         best_station = recommend_station(
             stations=stations,
-            battery_percentage=request.initial_soc
+            battery_percentage=request.initial_soc,
+            battery_capacity=request.battery_capacity,
+            user_cost_per_kwh=request.cost_per_kwh
         )
 
         # ----------------------------------------------------

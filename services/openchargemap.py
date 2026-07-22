@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from dotenv import load_dotenv
 
@@ -10,10 +11,29 @@ API_KEY = os.getenv("OPENCHARGEMAP_API_KEY")
 BASE_URL = "https://api.openchargemap.io/v3/poi/"
 
 
+# -----------------------------------------------------
+# Extract numeric charging cost from UsageCost
+# -----------------------------------------------------
+def extract_cost_per_kwh(usage_cost):
+
+    if not usage_cost:
+        return None
+
+    usage_cost = usage_cost.lower()
+
+    # Extract first numeric value
+    match = re.search(r"(\d+(\.\d+)?)", usage_cost)
+
+    if match:
+        return float(match.group(1))
+
+    return None
+
+
+# -----------------------------------------------------
+# Fetch Nearby Charging Stations
+# -----------------------------------------------------
 def get_nearby_stations(latitude, longitude, distance=5):
-    """
-    Fetch nearby charging stations from Open Charge Map.
-    """
 
     params = {
         "key": API_KEY,
@@ -45,14 +65,24 @@ def get_nearby_stations(latitude, longitude, distance=5):
         for conn in connections:
 
             power = conn.get("PowerKW")
+
             if power:
                 max_power = max(max_power, power)
 
             connection = conn.get("ConnectionType")
+
             if connection:
                 connector_types.append(
                     connection.get("Title", "Unknown")
                 )
+
+        usage_cost = (
+            station.get("UsageCost")
+            if station.get("UsageCost")
+            else "Unknown"
+        )
+
+        cost_per_kwh = extract_cost_per_kwh(usage_cost)
 
         stations.append({
 
@@ -60,7 +90,6 @@ def get_nearby_stations(latitude, longitude, distance=5):
 
             "address": station.get("AddressInfo", {}).get("AddressLine1"),
 
-            # Keep numeric (km)
             "distance": round(
                 station.get("AddressInfo", {}).get("Distance", 0),
                 2
@@ -82,11 +111,9 @@ def get_nearby_stations(latitude, longitude, distance=5):
 
             "connector_types": connector_types,
 
-            "usage_cost": (
-                station.get("UsageCost")
-                if station.get("UsageCost")
-                else "Unknown"
-            ),
+            "usage_cost": usage_cost,
+
+            "cost_per_kwh": cost_per_kwh,
 
             "status": (
                 station.get("StatusType", {}).get("Title")
